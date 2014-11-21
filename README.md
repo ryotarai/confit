@@ -34,3 +34,16 @@ $ cat /etc/my/config
 This is my config!
 ```
 
+`{{.Role}}` in prefix option will be replaced with Role tag.
+
+Use case
+--------
+
+Run Confit by cron:
+
+```
+* * * * * root AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... /usr/local/bin/confit -bucket=example-bucket -prefix 'roles/{{.Role}}/'
+* * * * * root AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... /usr/local/bin/confit -bucket=example-bucket -prefix 'hosts/{{.Name}}/'
+```
+
+You can update config files on all servers just by updating files on S3!
