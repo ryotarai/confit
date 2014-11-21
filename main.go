@@ -115,7 +115,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Printf("Writing to %v...", tempPath)
+		log.Printf("Writing to temporary file...")
 
 		err = ioutil.WriteFile(tempPath, data, 0600)
 		if err != nil {
@@ -124,14 +124,14 @@ func main() {
 
 		if *createDirectory {
 			destDir := path.Dir(destPath)
-			log.Printf("Creating destination directory... (%v)", destDir)
+			log.Printf("Creating destination directory...")
 			err = os.MkdirAll(destDir, 0700)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		log.Printf("Moving from %v to %v", tempPath, destPath)
+		log.Printf("Moving...")
 
 		err = os.Rename(tempPath, destPath)
 		if err != nil {
