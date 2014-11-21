@@ -47,3 +47,8 @@ Run Confit by cron:
 ```
 
 You can update config files on all servers just by updating files on S3!
+
+What is "confit"?
+-----------------
+
+http://en.wikipedia.org/wiki/Confit
