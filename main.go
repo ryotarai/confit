@@ -17,13 +17,6 @@ import (
 )
 
 func main() {
-	auth, err := aws.EnvAuth()
-	if err != nil {
-		log.Fatal(err)
-	}
-	ec2 := ec2.New(auth, aws.APNortheast)
-	s3 := s3.New(auth, aws.APNortheast)
-
 	// load config
 	bucketName := flag.String("bucket", "", "bucket name")
 	prefixFormat := flag.String("prefix", "", "key prefix")
@@ -35,6 +28,14 @@ func main() {
 	log.Printf("Bucket: %v", *bucketName)
 	log.Printf("Prefix format: %v", *prefixFormat)
 	log.Printf("Create destination directory automatically?: %v", *createDirectory)
+
+	// load credential
+	auth, err := aws.EnvAuth()
+	if err != nil {
+		log.Fatal(err)
+	}
+	ec2 := ec2.New(auth, aws.APNortheast)
+	s3 := s3.New(auth, aws.APNortheast)
 
 	// describe me
 	if *instanceId == "" {
