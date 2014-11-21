@@ -18,10 +18,10 @@ Assuming these objects exist on S3:
 ```
 s3://example-bucket
 └── roles
-      └── example-role
-            └── etc
-                  └── my
-                        └── config
+    └── example-role
+        └── etc
+            └── my
+                └── config
 ```
 
 Run confit on EC2 instance:
