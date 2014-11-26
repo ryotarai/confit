@@ -10,4 +10,4 @@ set -ex
 gox -os="linux" -arch="386 amd64" -output="pkg/{{.Dir}}_{{.OS}}_{{.Arch}}"
 git tag v$1
 git push --tags
-ghr -u ryotarai $1 pkg/
+ghr -u ryotarai v$1 pkg/
