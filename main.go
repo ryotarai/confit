@@ -6,6 +6,7 @@ import (
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/ec2"
 	"github.com/mitchellh/goamz/s3"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,6 +16,27 @@ import (
 	"strings"
 	"text/template"
 )
+
+func copyFile(srcPath string, dstPath string) error {
+    src, err := os.Open(srcPath)
+    if err != nil {
+		return err
+    }
+    defer src.Close()
+
+    dst, err := os.Create(dstPath)
+    if err != nil {
+		return err
+    }
+    defer dst.Close()
+
+    _, err = io.Copy(dst, src)
+    if  err != nil {
+        return err
+    }
+
+	return nil
+}
 
 func main() {
 	// load config
@@ -132,9 +154,16 @@ func main() {
 			}
 		}
 
-		log.Printf("Moving...")
+		log.Printf("Copying to destination path...")
 
-		err = os.Rename(tempPath, destPath)
+		err = copyFile(tempPath, destPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Printf("Removing temporary file...")
+
+		err = os.Remove(tempPath)
 		if err != nil {
 			log.Fatal(err)
 		}
