@@ -3,6 +3,8 @@ Confit
 
 Download config files from S3
 
+![](http://upload.wikimedia.org/wikipedia/commons/6/60/Confitdecanard.jpg)
+
 Installation
 ------------
 
