@@ -18,22 +18,23 @@ import (
 )
 
 func copyFile(srcPath string, dstPath string) error {
-    src, err := os.Open(srcPath)
-    if err != nil {
+	src, err := os.Open(srcPath)
+	if err != nil {
 		return err
-    }
-    defer src.Close()
+	}
+	defer src.Close()
 
-    dst, err := os.OpenFile(dstPath, os.O_RDWR, 0600)
-    if err != nil {
+	dst, err := os.Create(dstPath)
+	dst.Chmod(0600)
+	if err != nil {
 		return err
-    }
-    defer dst.Close()
+	}
+	defer dst.Close()
 
-    _, err = io.Copy(dst, src)
-    if  err != nil {
-        return err
-    }
+	_, err = io.Copy(dst, src)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
