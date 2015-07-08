@@ -17,6 +17,8 @@ import (
 	"text/template"
 )
 
+var version = "0.1.4"
+
 type EC2Helper struct {
 	client *ec2.EC2
 }
@@ -90,7 +92,7 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	log.Info("Starting Confit")
+	log.Infof("Starting Confit v%v", version)
 	log.Debugf("Bucket: %v", *bucketName)
 	log.Debugf("Prefix format: %v", *prefixFormat)
 	log.Debugf("Create destination directory automatically?: %v", *createDirectory)
