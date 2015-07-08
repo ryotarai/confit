@@ -228,7 +228,7 @@ func main() {
 		if *createDirectory {
 			destDir := path.Dir(destPath)
 			log.Debug("Creating destination directory...")
-			err = os.MkdirAll(destDir, 0700)
+			err = os.MkdirAll(destDir, 0755)
 			if err != nil {
 				log.Fatal(err)
 			}
