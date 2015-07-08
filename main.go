@@ -8,7 +8,7 @@ import (
 	"github.com/mitchellh/goamz/s3"
 	"io"
 	"io/ioutil"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"os"
 	"path"
@@ -45,12 +45,17 @@ func main() {
 	prefixFormat := flag.String("prefix", "", "key prefix")
 	createDirectory := flag.Bool("create-directory", true, "create destination directory automatically?")
 	instanceId := flag.String("debug-instance-id", "", "instance id (for debug)")
+	debug := flag.Bool("debug", false, "debug mode")
 
 	flag.Parse()
 
-	log.Printf("Bucket: %v", *bucketName)
-	log.Printf("Prefix format: %v", *prefixFormat)
-	log.Printf("Create destination directory automatically?: %v", *createDirectory)
+	if *debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	log.Debugf("Bucket: %v", *bucketName)
+	log.Debugf("Prefix format: %v", *prefixFormat)
+	log.Debugf("Create destination directory automatically?: %v", *createDirectory)
 
 	// load credential
 	auth, err := aws.EnvAuth()
@@ -62,7 +67,7 @@ func main() {
 
 	// describe me
 	if *instanceId == "" {
-		log.Printf("Getting instance id...")
+		log.Debug("Getting instance id...")
 		resp, err := http.Get("http://169.254.169.254/latest/meta-data/instance-id")
 		if err != nil {
 			log.Fatal(err)
@@ -76,7 +81,7 @@ func main() {
 		tmp := string(b)
 		instanceId = &tmp
 	}
-	log.Printf("Instance ID is %v", *instanceId)
+	log.Debugf("Instance ID is %v", *instanceId)
 
 	instancesResp, err := ec2.Instances([]string{*instanceId}, nil)
 	if err != nil {
@@ -85,7 +90,7 @@ func main() {
 	reservation := instancesResp.Reservations[0]
 	instance := reservation.Instances[0]
 
-	log.Printf("Instance: %v", instance)
+	log.Debugf("Instance: %v", instance)
 
 	tags := map[string]string{}
 	for _, tag := range instance.Tags {
@@ -110,7 +115,7 @@ func main() {
 		prefix = prefix + "/"
 	}
 
-	log.Printf("Prefix: %v", prefix)
+	log.Debugf("Prefix: %v", prefix)
 
 	// list files
 	bucket := s3.Bucket(*bucketName)
@@ -128,7 +133,7 @@ func main() {
 
 		// remove prefix
 		destPath := re.ReplaceAllString(content.Key, "/")
-		log.Printf("%v -> %v", content.Key, destPath)
+		log.Debugf("%v -> %v", content.Key, destPath)
 
 		// determine temp path
 		tempPath := path.Join(os.TempDir(), "confit-temp")
@@ -139,7 +144,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Printf("Writing to temporary file...")
+		log.Debug("Writing to temporary file...")
 
 		err = ioutil.WriteFile(tempPath, data, 0600)
 		if err != nil {
@@ -148,25 +153,27 @@ func main() {
 
 		if *createDirectory {
 			destDir := path.Dir(destPath)
-			log.Printf("Creating destination directory...")
+			log.Debug("Creating destination directory...")
 			err = os.MkdirAll(destDir, 0700)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		log.Printf("Copying to destination path...")
+		log.Debug("Copying to destination path...")
 
 		err = copyFile(tempPath, destPath)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Printf("Removing temporary file...")
+		log.Debug("Removing temporary file...")
 
 		err = os.Remove(tempPath)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+
+	log.Info("Finished.")
 }
