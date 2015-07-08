@@ -3,12 +3,12 @@ package main
 import (
 	"bytes"
 	"flag"
-	"github.com/mitchellh/goamz/aws"
-	"github.com/mitchellh/goamz/ec2"
-	"github.com/mitchellh/goamz/s3"
+	log "github.com/Sirupsen/logrus"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"io"
 	"io/ioutil"
-	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"os"
 	"path"
@@ -39,6 +39,65 @@ func copyFile(srcPath string, dstPath string) error {
 	return nil
 }
 
+type EC2Helper struct {
+	client *ec2.EC2
+}
+
+func (h *EC2Helper) getInstanceById(instanceId string) (*ec2.Instance, error) {
+	params := &ec2.DescribeInstancesInput{
+		InstanceIDs: []*string{
+			aws.String(instanceId),
+		},
+	}
+	resp, err := h.client.DescribeInstances(params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	reservation := resp.Reservations[0]
+	instance := reservation.Instances[0]
+
+	return instance, nil
+}
+
+type S3Helper struct {
+	client *s3.S3
+}
+
+func (h *S3Helper) listObjects(bucket string, prefix string) ([]*s3.Object, error) {
+	log.Debug(bucket)
+	log.Debug(prefix)
+
+	params := &s3.ListObjectsInput{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
+	}
+	resp, err := h.client.ListObjects(params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug(resp)
+	return resp.Contents, nil
+}
+
+func (h *S3Helper) getObject(bucket string, key string) (*s3.GetObjectOutput, error) {
+	params := &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}
+
+	resp, err := h.client.GetObject(params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 func main() {
 	// load config
 	bucketName := flag.String("bucket", "", "bucket name")
@@ -57,13 +116,26 @@ func main() {
 	log.Debugf("Prefix format: %v", *prefixFormat)
 	log.Debugf("Create destination directory automatically?: %v", *createDirectory)
 
-	// load credential
-	auth, err := aws.EnvAuth()
-	if err != nil {
-		log.Fatal(err)
+	var awsLogLevel uint
+	if *debug {
+		awsLogLevel = 1
+	} else {
+		awsLogLevel = 0
 	}
-	ec2 := ec2.New(auth, aws.APNortheast)
-	s3 := s3.New(auth, aws.APNortheast)
+
+	awsConfig := aws.Config{
+		LogLevel: awsLogLevel,
+	}
+
+	ec2 := ec2.New(&awsConfig)
+	ec2Helper := EC2Helper{
+		client: ec2,
+	}
+
+	s3 := s3.New(&awsConfig)
+	s3Helper := S3Helper{
+		client: s3,
+	}
 
 	// describe me
 	if *instanceId == "" {
@@ -83,18 +155,14 @@ func main() {
 	}
 	log.Debugf("Instance ID is %v", *instanceId)
 
-	instancesResp, err := ec2.Instances([]string{*instanceId}, nil)
+	instance, err := ec2Helper.getInstanceById(*instanceId)
 	if err != nil {
 		log.Fatal(err)
 	}
-	reservation := instancesResp.Reservations[0]
-	instance := reservation.Instances[0]
-
-	log.Debugf("Instance: %v", instance)
 
 	tags := map[string]string{}
 	for _, tag := range instance.Tags {
-		tags[tag.Key] = tag.Value
+		tags[*tag.Key] = *tag.Value
 	}
 
 	// render prefix
@@ -118,35 +186,41 @@ func main() {
 	log.Debugf("Prefix: %v", prefix)
 
 	// list files
-	bucket := s3.Bucket(*bucketName)
-	listResp, err := bucket.List(prefix, "", "", 1000)
+	objects, err := s3Helper.listObjects(*bucketName, prefix)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	log.Debugf("%d objects", len(objects))
+
 	// download to temp dir
 	re := regexp.MustCompile("^" + regexp.QuoteMeta(prefix))
-	for _, content := range listResp.Contents {
-		if content.Size == 0 {
+	for _, object := range objects {
+		if *object.Size == 0 {
 			continue
 		}
 
 		// remove prefix
-		destPath := re.ReplaceAllString(content.Key, "/")
-		log.Debugf("%v -> %v", content.Key, destPath)
+		destPath := re.ReplaceAllString(*object.Key, "/")
+		log.Debugf("%v -> %v", *object.Key, destPath)
 
 		// determine temp path
 		tempPath := path.Join(os.TempDir(), "confit-temp")
 
 		// download
-		data, err := bucket.Get(content.Key)
+		data, err := s3Helper.getObject(*bucketName, *object.Key)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		dataBody, err := ioutil.ReadAll(data.Body)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		log.Debug("Writing to temporary file...")
 
-		err = ioutil.WriteFile(tempPath, data, 0600)
+		err = ioutil.WriteFile(tempPath, dataBody, 0600)
 		if err != nil {
 			log.Fatal(err)
 		}
