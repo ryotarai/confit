@@ -17,28 +17,6 @@ import (
 	"text/template"
 )
 
-func copyFile(srcPath string, dstPath string) error {
-	src, err := os.Open(srcPath)
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	dst, err := os.Create(dstPath)
-	dst.Chmod(0600)
-	if err != nil {
-		return err
-	}
-	defer dst.Close()
-
-	_, err = io.Copy(dst, src)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 type EC2Helper struct {
 	client *ec2.EC2
 }
@@ -234,16 +212,9 @@ func main() {
 			}
 		}
 
-		log.Debug("Copying to destination path...")
+		log.Debug("Moving temporary file to destination path...")
 
-		err = copyFile(tempPath, destPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		log.Debug("Removing temporary file...")
-
-		err = os.Remove(tempPath)
+		err = os.Rename(tempPath, destPath)
 		if err != nil {
 			log.Fatal(err)
 		}
