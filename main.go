@@ -3,11 +3,11 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -90,6 +90,7 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	log.Info("Starting Confit")
 	log.Debugf("Bucket: %v", *bucketName)
 	log.Debugf("Prefix format: %v", *prefixFormat)
 	log.Debugf("Create destination directory automatically?: %v", *createDirectory)
@@ -169,11 +170,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Debugf("%d objects", len(objects))
+	log.Infof("%d objects found", len(objects))
+
+	// create temporary directory
+	tempDir, err := ioutil.TempDir("", "confit")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Debugf("Temporary directory: %v", tempDir)
 
 	// download to temp dir
 	re := regexp.MustCompile("^" + regexp.QuoteMeta(prefix))
-	for _, object := range objects {
+	for i, object := range objects {
 		if *object.Size == 0 {
 			continue
 		}
@@ -181,9 +190,6 @@ func main() {
 		// remove prefix
 		destPath := re.ReplaceAllString(*object.Key, "/")
 		log.Debugf("%v -> %v", *object.Key, destPath)
-
-		// determine temp path
-		tempPath := path.Join(os.TempDir(), "confit-temp")
 
 		// download
 		data, err := s3Helper.getObject(*bucketName, *object.Key)
@@ -196,7 +202,8 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Debug("Writing to temporary file...")
+		tempPath := path.Join(tempDir, fmt.Sprintf("%d", i))
+		log.Debugf("Writing to %v", tempPath)
 
 		err = ioutil.WriteFile(tempPath, dataBody, 0600)
 		if err != nil {
