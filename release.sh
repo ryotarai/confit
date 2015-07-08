@@ -8,6 +8,6 @@ set -ex
 
 #gox -os="darwin linux windows" -arch="386 amd64" -output="pkg/{{.Dir}}_{{.OS}}_{{.Arch}}"
 gox -os="linux" -arch="386 amd64" -output="pkg/{{.Dir}}_{{.OS}}_{{.Arch}}"
-git tag v$1
+git tag v$1 || true
 git push --tags
 ghr -u ryotarai v$1 pkg/

@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"io/ioutil"
+	"time"
 	"net/http"
 	"os"
 	"path"
@@ -174,17 +175,9 @@ func main() {
 
 	log.Infof("%d objects found", len(objects))
 
-	// create temporary directory
-	tempDir, err := ioutil.TempDir("", "confit")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Debugf("Temporary directory: %v", tempDir)
-
-	// download to temp dir
+	// download
 	re := regexp.MustCompile("^" + regexp.QuoteMeta(prefix))
-	for i, object := range objects {
+	for _, object := range objects {
 		if *object.Size == 0 {
 			continue
 		}
@@ -204,7 +197,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		tempPath := path.Join(tempDir, fmt.Sprintf("%d", i))
+		tempPath := destPath + fmt.Sprintf(".%d.confit.tmp", time.Now().UnixNano())
 		log.Debugf("Writing to %v", tempPath)
 
 		err = ioutil.WriteFile(tempPath, dataBody, 0600)
@@ -221,7 +214,7 @@ func main() {
 			}
 		}
 
-		log.Debug("Moving temporary file to destination path...")
+		log.Debugf("Moving %v to %v", tempPath, destPath)
 
 		err = os.Rename(tempPath, destPath)
 		if err != nil {
