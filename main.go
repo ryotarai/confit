@@ -197,7 +197,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		tempPath := destPath + fmt.Sprintf(".%d.confit.tmp", time.Now().UnixNano())
+		tempPath := fmt.Sprintf("%v/.%v.%d.confit.tmp", path.Dir(destPath), path.Base(destPath), time.Now().UnixNano())
 		log.Debugf("Writing to %v", tempPath)
 
 		err = ioutil.WriteFile(tempPath, dataBody, 0600)
