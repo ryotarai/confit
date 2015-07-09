@@ -86,11 +86,17 @@ func main() {
 	createDirectory := flag.Bool("create-directory", true, "create destination directory automatically?")
 	instanceId := flag.String("debug-instance-id", "", "instance id (for debug)")
 	debug := flag.Bool("debug", false, "debug mode")
+	showVersion := flag.Bool("version", false, "show version")
 
 	flag.Parse()
 
 	if *debug {
 		log.SetLevel(log.DebugLevel)
+	}
+
+	if *showVersion {
+		log.Infof("Confit v%v", version)
+		os.Exit(0)
 	}
 
 	log.Infof("Starting Confit v%v", version)
